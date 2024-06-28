@@ -568,7 +568,14 @@ struct ConvertBinary {
         // Named binary ops directly overwrite data in `outs` buffer so, there is no need to provide non-empty
         // destination at the tensor-level.
         // Use `tensor.empty` to avoid temporary buffer allocation and memcpy after bufferization.
-        auto empty = builder.create<mlir::tensor::EmptyOp>(loc, outType.getShape(), outType.getElementType());
+        llvm::SmallVector<Value> dynamicSizes;
+        for (auto [idx, dim] : llvm::enumerate(outType.getShape())) {
+            if (!mlir::ShapedType::isDynamic(dim))
+                continue;
+            auto dimSize = builder.create<tensor::DimOp>(loc, inputs[0], idx);
+            dynamicSizes.push_back(dimSize);
+        }
+        auto empty = builder.create<tensor::EmptyOp>(loc, outType, dynamicSizes);
         auto op = builder.create<TargetOp>(loc, mlir::ValueRange{inputs[0], inputs[1]}, mlir::ValueRange{empty});
         context.addOutputs(node, op);
     }
@@ -618,7 +625,9 @@ mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
         auto tensor = conversion_context.nodeOutputMap.at(outputs[i]);
         auto memref = func.getArgument(i + inputs.size());
         auto loc = createLocation(context, outputs[i].get_node_shared_ptr());
-        // TODO: Is restrict always guaranteed?
+        // Ensure that the result in stored in the provided function argument.
+        // Mark as restrict to avoid temporary buffer and copy.
+        // Mark as writable to ensure the output can be written to the buffer.
         block_builder.create<bufferization::MaterializeInDestinationOp>(loc,
                                                                         TypeRange{},
                                                                         tensor,
