@@ -625,7 +625,7 @@ mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
         auto tensor = conversion_context.nodeOutputMap.at(outputs[i]);
         auto memref = func.getArgument(i + inputs.size());
         auto loc = createLocation(context, outputs[i].get_node_shared_ptr());
-        // Ensure that the result in stored in the provided function argument.
+        // Ensure the result is stored in the provided function argument.
         // Mark as restrict to avoid temporary buffer and copy.
         // Mark as writable to ensure the output can be written to the buffer.
         block_builder.create<bufferization::MaterializeInDestinationOp>(loc,
