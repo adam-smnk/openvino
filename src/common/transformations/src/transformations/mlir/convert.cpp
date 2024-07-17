@@ -279,7 +279,7 @@ bool elementwise_f32_binary_no_broadcast_predicate(const ov::Output<ov::Node>& o
     auto input_shape_a = output.get_node_shared_ptr()->get_input_partial_shape(0);
     auto input_shape_b = output.get_node_shared_ptr()->get_input_partial_shape(1);
     auto output_shape = output.get_partial_shape();
-    if (output_shape.rank().is_dynamic() || input_shape_a.rank().is_dynamic() || input_shape_b.rank().is_dynamic()) {
+    if(output_shape.rank().is_dynamic() || input_shape_a.rank().is_dynamic() || input_shape_b.rank().is_dynamic()) {
         return false;
     }
     if(output_shape.rank().get_length() != input_shape_a.rank().get_length() || output_shape.rank().get_length() != input_shape_b.rank().get_length()) {
