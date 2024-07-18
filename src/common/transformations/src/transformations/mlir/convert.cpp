@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <functional>
 #include <openvino/op/add.hpp>
-#include <openvino/op/subtract.hpp>
-#include <openvino/op/multiply.hpp>
 #include <openvino/op/divide.hpp>
-
+#include <openvino/op/multiply.hpp>
+#include <openvino/op/relu.hpp>
+#include <openvino/op/subtract.hpp>
 #include <openvino/pass/graph_rewrite.hpp>
 #include <openvino/pass/manager.hpp>
 #include <openvino/pass/pattern/op/wrap_type.hpp>
@@ -269,6 +269,70 @@ public:
     }
 };
 
+struct ConvertRelu {
+    void operator()(ConversionContext& context, NodePtr node) {
+        auto loc = createLocation(context.context, node);
+        auto& builder = context.builder();
+        // TODO: Support broadcasts
+        const auto input = context.getInputs(node)[0];
+        const auto ov_output_element_type = node->get_output_element_type(0);
+        const auto ov_output_shape = node->get_output_partial_shape(0);
+        auto outType = importTensor(context.context, ov_output_shape, ov_output_element_type);
+        // Named unary ops directly overwrite data in `outs` buffer so, there is no need to provide non-empty
+        // destination at the tensor-level.
+        // Use `tensor.empty` to avoid temporary buffer allocation and memcpy after bufferization.
+        llvm::SmallVector<Value> dynamicSizes;
+        for (auto [idx, dim] : llvm::enumerate(outType.getShape())) {
+            if (!mlir::ShapedType::isDynamic(dim))
+                continue;
+            auto dimSize = builder.create<tensor::DimOp>(loc, input, idx);
+            dynamicSizes.push_back(dimSize);
+        }
+        auto empty = builder.create<tensor::EmptyOp>(loc, outType, dynamicSizes);
+        auto zero = getConstant(builder, ov_output_element_type, 0);
+        auto fill = builder.create<linalg::FillOp>(loc, mlir::ValueRange{zero}, mlir::ValueRange{empty});
+        auto relu =
+            builder.create<linalg::MaxOp>(loc, mlir::ValueRange{input, fill.getResult(0)}, mlir::ValueRange{empty});
+        context.addOutputs(node, relu);
+    }
+};
+
+bool elementwise_f32_unary_no_broadcast_predicate(const ov::Output<ov::Node>& output) {
+    if (output.get_element_type() != ov::element::f32) {
+        return false;
+    }
+    // Check if implicit broadcast is possible, reject in this case
+    // Relies on symbolic information -- register SymbolicPropagation before applying this pattern
+    auto input_shape = output.get_node_shared_ptr()->get_input_partial_shape(0);
+    auto output_shape = output.get_partial_shape();
+    if (output_shape.rank().is_dynamic() || input_shape.rank().is_dynamic()) {
+        return false;
+    }
+    if (output_shape.rank().get_length() != input_shape.rank().get_length()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < output_shape.size(); ++i) {
+        if (output_shape[i] != input_shape[i]) {
+            return false;
+        }
+        // Continue if all shapes are static.
+        if (output_shape[i].is_static() && input_shape[i].is_static()) {
+            continue;
+        }
+        if (!ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape[i].get_symbol())) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+template <typename Op>
+NodePtr elementwise_f32_unary_no_broadcast() {
+    using namespace ov::pass::pattern;
+    return wrap_type<Op>({any_input()}, elementwise_f32_unary_no_broadcast_predicate);
+}
 
 bool elementwise_f32_binary_no_broadcast_predicate(const ov::Output<ov::Node>& output) {
     if(output.get_element_type() != ov::element::f32) {
@@ -291,9 +355,9 @@ bool elementwise_f32_binary_no_broadcast_predicate(const ov::Output<ov::Node>& o
             return false;
         }
         // Continue if all shapes are static.
-        if (output_shape[i].is_static() && input_shape_a[i].is_static() &&
-            input_shape_b[i].is_static())
+        if (output_shape[i].is_static() && input_shape_a[i].is_static() && input_shape_b[i].is_static()) {
             continue;
+        }
         if(!ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape_a[i].get_symbol()) || !ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape_b[i].get_symbol())) {
             return false;
         }
@@ -319,6 +383,7 @@ void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
     manager.register_pass<MarkPattern>(elementwise_f32_binary_no_broadcast<v1::Subtract>(), ConvertBinary<linalg::SubOp>());
     manager.register_pass<MarkPattern>(elementwise_f32_binary_no_broadcast<v1::Multiply>(), ConvertBinary<linalg::MulOp>());
     manager.register_pass<MarkPattern>(elementwise_f32_binary_no_broadcast<v1::Divide>(), ConvertBinary<linalg::DivOp>());
+    manager.register_pass<MarkPattern>(elementwise_f32_unary_no_broadcast<v0::Relu>(), ConvertRelu());
     manager.register_pass<MatMulPattern>();
     manager.register_pass<Partitioner>(context);
     manager.run_passes(model);
