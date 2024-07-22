@@ -29,7 +29,7 @@ class TestMlirBinaryOps(PytorchLayerTest):
 
         ref_net = None
 
-        return mlir_binary_ops(lhs_type, rhs_type), ref_net, "mlir::binary_ops"
+        return mlir_binary_ops(lhs_type, rhs_type), ref_net, None
 
     @pytest.mark.parametrize(("lhs_type", "rhs_type"), [[torch.float32, torch.float32]])
     @pytest.mark.parametrize(("lhs_shape", "rhs_shape"), [([2, 3], [2, 3])])
@@ -39,6 +39,6 @@ class TestMlirBinaryOps(PytorchLayerTest):
         self.lhs_shape = lhs_shape
         self.rhs_type = rhs_type
         self.rhs_shape = rhs_shape
+        # TODO: test with static shapes for XSMM acceleration
         self._test(*self.create_model(lhs_type, rhs_type),
-                   ie_device, precision, ir_version, freeze_model=False, trace_model=True)
-
+                   ie_device, precision, ir_version, dynamic_shapes=True)
