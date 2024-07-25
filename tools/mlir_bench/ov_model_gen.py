@@ -168,6 +168,45 @@ def generate_ov_model(layers_desc: str, data_type: str, shape_type: str, file_na
 
     ov_model = ov.convert_model(torch_seq, input=inputs)
     ov.save_model(ov_model, f"{file_name}")
+    return ov_model
+
+
+class BaselineMLP(nn.Module):
+    def __init__(self, sizes_mnk, type=None):
+        super(BaselineMLP, self).__init__()
+        m = sizes_mnk[0]
+        n = sizes_mnk[1]
+        self.bias = torch.empty((m, n), dtype=type).data.fill_(0.01)
+        self.relu = nn.ReLU()
+    def forward(self, a, b):
+        c = torch.matmul(a, b)
+        c = torch.add(c, self.bias)
+        return self.relu(c)
+
+
+def baseline_MLP(sizes: list[int], data_type: str) -> tuple[nn.Model, list]:
+    assert len(sizes) == 3, "Invalid baseline MLP sizes"
+    mlp = BaselineMLP(sizes, get_torch_type(data_type))
+    m = sizes[0]
+    n = sizes[1]
+    k = sizes[2]
+    ov_type = get_ov_type(data_type)
+    inputs = [(ov.PartialShape([m, k]), ov_type), (ov.PartialShape([k, n]), ov_type)]
+    return (mlp, inputs)
+
+
+def generate_baseline_model(model_desc: str, data_type: str, shape_type: str, file_name: str):
+    model_name = get_layer_name(model_desc)
+    input_shapes = get_layer_inputs(model_desc, shape_type == 'dynamic')
+
+    if model_name == 'mlp':
+        baseline_tuple = baseline_MLP(*input_shapes, data_type)
+    else:
+        assert False, f"Unsupported baseline model data type {model_name}"
+
+    ov_model = ov.convert_model(baseline_tuple[0], input=baseline_tuple[1])
+    ov.save_model(ov_model, f"{file_name}")
+    return ov_model
 
 
 def main():
@@ -185,9 +224,20 @@ def main():
                         help='Model shapes type: static|dynamic')
     parser.add_argument('-n', '--name', default='temp.xml',
                         help='Name for exported XML model')
+    parser.add_argument('-b', '--baseline', default=None, type=str.lower,
+                        help='Baseline pre-made model - overrides layers. For example:\
+                                -b=mlp[32,64,16]')
+    parser.add_argument('-p', '--print', action='store_true',
+                        help='Compile and print the model')
     args = parser.parse_args()
 
-    generate_ov_model(args.layers, args.type, args.shapes, args.name)
+    if args.baseline is not None:
+        model = generate_baseline_model(args.baseline, args.type, args.shapes, args.name)
+    else:
+        model = generate_ov_model(args.layers, args.type, args.shapes, args.name)
+
+    if args.print:
+        ov.compile_model(model, 'CPU')
 
     return 0
 

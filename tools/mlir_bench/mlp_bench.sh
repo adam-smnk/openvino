@@ -3,18 +3,22 @@
 # Runs MLP benchmarks
 
 die_syntax() {
-  echo "Syntax: $0 [-t (f32|f16|bf16|...)] [-D]"
+  echo "Syntax: $0 [-t (f32|f16|bf16|...)] [-b (mlp)] [-D]"
   echo ""
   echo "  -t: Optional data type"
+  echo "  -b: Optional baseline model"
   echo "  -D: Set model shapes to dynamic"
   exit 1
 }
 
 # Cmd-line opts
-while getopts "t:D" arg; do
+while getopts "t:b:D" arg; do
   case ${arg} in
     t)
       DATA_TYPE=${OPTARG}
+      ;;
+    b)
+      BASELINE_MODEL=${OPTARG}
       ;;
     D)
       IS_DYNAMIC=true
@@ -66,9 +70,12 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
   echo "MLP - OUT: ${OUT_SIZE} INS: ${INPUT_SIZES[@]}"
   for IN_SIZE in "${INPUT_SIZES[@]}"; do
     # Generate model.
+    if [ "${BASELINE_MODEL}" ]; then
+        BASELINE_FLAGS=(-b="${BASELINE_MODEL}[${OUT_SIZE},${OUT_SIZE},${IN_SIZE}]")
+    fi
     MODEL_FLAGS=(-l="linear[${IN_SIZE},${OUT_SIZE}] relu[]"
         -t ${DATA_TYPE} -s ${SHAPES} -n ${MODEL_NAME})
-    python3 ${MODEL_GEN} "${MODEL_FLAGS[@]}"
+    python3 ${MODEL_GEN} "${MODEL_FLAGS[@]}" "${BASELINE_FLAGS[@]}"
     if [ $? != 0 ]; then
         echo "Failed to generate model"
         exit 1
