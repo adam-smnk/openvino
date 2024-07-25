@@ -53,6 +53,10 @@ if ! [ "$(command -v ${BENCH_RUNNER})" ]; then
   echo "Missing benchmark runner"
   exit 1
 fi
+if [ "${BASELINE_MODEL}" ] && [ ${IS_DYNAMIC} ]; then
+  echo "Baseline models with dynamic shapes not supported"
+  exit 1
+fi
 
 # Kernel config.
 INPUT_SIZES=( 1024 2048 4096 8192 )
@@ -86,8 +90,11 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
         # No native support for bf16, use simple f16 instead.
         PRECISION="f16"
     fi
-    BENCH_FLAGS="-m ${MODEL_NAME} -d CPU -data_shape [${OUT_SIZE,IN_SIZE}]\
-        -ip ${PRECISION}"
+    if [ ${IS_DYNAMIC} ]; then
+        DATA_SHAPE=(-data_shape [${OUT_SIZE,IN_SIZE}])
+    fi
+    BENCH_FLAGS="-m ${MODEL_NAME} -d CPU \
+        -ip ${PRECISION} ${DATA_SHAPE[@]}"
     ${BENCH_RUNNER} ${BENCH_FLAGS} 2>/dev/null | \
         sed -nE "s/.*\[ INFO \]\s*Median:\s*([0-9.]+).*/\\1/p"
   done

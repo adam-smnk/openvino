@@ -184,12 +184,14 @@ class BaselineMLP(nn.Module):
         return self.relu(c)
 
 
-def baseline_MLP(sizes: list[int], data_type: str) -> tuple[nn.Model, list]:
+def baseline_MLP(model_desc: str, data_type: str, is_dynamic: bool) -> tuple[nn.Model, list]:
+    sizes = get_layer_sizes(model_desc)
     assert len(sizes) == 3, "Invalid baseline MLP sizes"
     mlp = BaselineMLP(sizes, get_torch_type(data_type))
-    m = sizes[0]
-    n = sizes[1]
-    k = sizes[2]
+    input_shapes = get_layer_inputs(model_desc, is_dynamic)[0]
+    m = input_shapes[0]
+    n = input_shapes[1]
+    k = input_shapes[2]
     ov_type = get_ov_type(data_type)
     inputs = [(ov.PartialShape([m, k]), ov_type), (ov.PartialShape([k, n]), ov_type)]
     return (mlp, inputs)
@@ -197,10 +199,9 @@ def baseline_MLP(sizes: list[int], data_type: str) -> tuple[nn.Model, list]:
 
 def generate_baseline_model(model_desc: str, data_type: str, shape_type: str, file_name: str):
     model_name = get_layer_name(model_desc)
-    input_shapes = get_layer_inputs(model_desc, shape_type == 'dynamic')
 
     if model_name == 'mlp':
-        baseline_tuple = baseline_MLP(*input_shapes, data_type)
+        baseline_tuple = baseline_MLP(model_desc, data_type, shape_type == 'dynamic')
     else:
         assert False, f"Unsupported baseline model data type {model_name}"
 
