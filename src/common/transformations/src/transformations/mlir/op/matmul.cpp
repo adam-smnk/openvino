@@ -30,14 +30,15 @@ struct ConvertMatMul {
         auto zero = getConstant(builder, ov_output_element_type, 0);
         auto fill = builder.create<linalg::FillOp>(loc, mlir::ValueRange{zero}, mlir::ValueRange{empty});
 
-        mlir::ValueRange ins{inputs[0], inputs[1]};
-        mlir::ValueRange outs{fill.getResult(0)};
+        mlir::SmallVector<Value, 2> ins{inputs[0], inputs[1]};
+        mlir::SmallVector<Value, 1> outs{fill.getResult(0)};
 
         auto matmul_node = std::dynamic_pointer_cast<ov::op::v0::MatMul>(node);
         assert(matmul_node);
         bool isTransposedA = matmul_node->get_transpose_a();
         bool isTransposedB = matmul_node->get_transpose_b();
         assert(!(isTransposedA && isTransposedB));
+
         Operation* matmul;
         if (isTransposedA) {
             matmul = builder.create<linalg::MatmulTransposeAOp>(loc, ins, outs);
