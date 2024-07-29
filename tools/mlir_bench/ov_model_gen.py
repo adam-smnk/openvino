@@ -149,7 +149,7 @@ def get_layer_inputs(layer_desc: str, is_dynamic: bool):
     return [input_sizes]
 
 
-def generate_ov_model(layers_desc: str, data_type: str, shape_type: str, file_name: str):
+def generate_ov_model(layers_desc: str, data_type: str, file_name: str, is_dynamic: bool = False):
     layers = layers_desc.split()
     torch_seq = TorchSequential()
     for layer in layers:
@@ -161,7 +161,6 @@ def generate_ov_model(layers_desc: str, data_type: str, shape_type: str, file_na
         print("Invalid input layer sizes")
         sys.exit(1)
 
-    is_dynamic = shape_type == 'dynamic'
     input_shapes = get_layer_inputs(layers[0], is_dynamic)
     ov_type = get_ov_type(data_type)
     inputs = [(ov.PartialShape(shapes), ov_type) for shapes in input_shapes]
@@ -197,11 +196,11 @@ def baseline_MLP(model_desc: str, data_type: str, is_dynamic: bool) -> tuple[nn.
     return (mlp, inputs)
 
 
-def generate_baseline_model(model_desc: str, data_type: str, shape_type: str, file_name: str):
+def generate_baseline_model(model_desc: str, data_type: str, file_name: str, is_dynamic: bool = False):
     model_name = get_layer_name(model_desc)
 
     if model_name == 'mlp':
-        baseline_tuple = baseline_MLP(model_desc, data_type, shape_type == 'dynamic')
+        baseline_tuple = baseline_MLP(model_desc, data_type, is_dynamic)
     else:
         assert False, f"Unsupported baseline model data type {model_name}"
 
@@ -221,8 +220,8 @@ def main():
                                 -l="add[8,8] div[8,8]"')
     parser.add_argument('-t', '--type', default='f32', type=str.lower,
                         help='Data type: f32|f16|bf16|...')
-    parser.add_argument('-s', '--shapes', default='static', type=str.lower,
-                        help='Model shapes type: static|dynamic')
+    parser.add_argument('--dynamic', action='store_true',
+                        help='Make model shapes dynamic')
     parser.add_argument('-n', '--name', default='temp.xml',
                         help='Name for exported XML model')
     parser.add_argument('-b', '--baseline', default=None, type=str.lower,
@@ -233,9 +232,9 @@ def main():
     args = parser.parse_args()
 
     if args.baseline is not None:
-        model = generate_baseline_model(args.baseline, args.type, args.shapes, args.name)
+        model = generate_baseline_model(args.baseline, args.type, args.name, args.dynamic)
     else:
-        model = generate_ov_model(args.layers, args.type, args.shapes, args.name)
+        model = generate_ov_model(args.layers, args.type, args.name, args.dynamic)
 
     if args.print:
         ov.compile_model(model, 'CPU')

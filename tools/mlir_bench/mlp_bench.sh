@@ -64,10 +64,6 @@ OUTPUT_SIZES=( 128 256 512 )
 if [ ! "${DATA_TYPE}" ]; then
     DATA_TYPE="f32"
 fi
-SHAPES="static"
-if [ ${IS_DYNAMIC} ]; then
-    SHAPES="dynamic"
-fi
 MODEL_NAME="MLIR_MLP_BENCH.xml"
 
 for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
@@ -75,11 +71,17 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
   for IN_SIZE in "${INPUT_SIZES[@]}"; do
     # Generate model.
     if [ "${BASELINE_MODEL}" ]; then
-        BASELINE_FLAGS=(-b="${BASELINE_MODEL}[${OUT_SIZE},${OUT_SIZE},${IN_SIZE}]")
+        # Enable baseline model flag.
+        MODEL_CONFIG=(-b="${BASELINE_MODEL}[${OUT_SIZE},${OUT_SIZE},${IN_SIZE}]")
+    else
+        # Generate default PyTorch MLP.
+        MODEL_CONFIG=(-l="linear[${IN_SIZE},${OUT_SIZE}] relu[]")
     fi
-    MODEL_FLAGS=(-l="linear[${IN_SIZE},${OUT_SIZE}] relu[]"
-        -t ${DATA_TYPE} -s ${SHAPES} -n ${MODEL_NAME})
-    python3 ${MODEL_GEN} "${MODEL_FLAGS[@]}" "${BASELINE_FLAGS[@]}"
+    GEN_FLAGS=(-t ${DATA_TYPE} -n ${MODEL_NAME})
+    if [ ${IS_DYNAMIC} ]; then
+        GEN_FLAGS+=(--dynamic)
+    fi
+    python3 ${MODEL_GEN} "${MODEL_CONFIG[@]}" "${GEN_FLAGS[@]}"
     if [ $? != 0 ]; then
         echo "Failed to generate model"
         exit 1
@@ -91,7 +93,7 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
         PRECISION="f16"
     fi
     if [ ${IS_DYNAMIC} ]; then
-        DATA_SHAPE=(-data_shape [${OUT_SIZE,IN_SIZE}])
+        DATA_SHAPE=(-data_shape [${OUT_SIZE},${IN_SIZE}])
     fi
     # Benchmark config. Disable parallelism.
     PERF_FLAGS="-niter 10000 -hint none -nstreams 1 -nthreads 1"
