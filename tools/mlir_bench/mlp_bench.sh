@@ -50,7 +50,7 @@ if ! [ -f ${MODEL_GEN} ]; then
   exit 1
 fi
 if ! [ "$(command -v ${BENCH_RUNNER})" ]; then
-  echo "Missing benchmark runner"
+  echo "Missing benchmark runner ${BENCH_RUNNER}"
   exit 1
 fi
 if [ "${BASELINE_MODEL}" ] && [ ${IS_DYNAMIC} ]; then
