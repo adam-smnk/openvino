@@ -1,6 +1,9 @@
 #!/bin/bash
-#
-# Runs MLP benchmarks
+
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Runs OV MLP benchmarks.
 
 die_syntax() {
   echo "Syntax: $0 [-t (f32|f16|bf16|...)] [-b (mlp)] [-D]"
