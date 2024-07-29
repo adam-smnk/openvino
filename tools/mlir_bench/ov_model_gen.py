@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import string
 import sys
+import os
 
 import torch
 import torch.nn as nn
@@ -243,4 +244,4 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    os._exit(main())
