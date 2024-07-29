@@ -93,8 +93,10 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
     if [ ${IS_DYNAMIC} ]; then
         DATA_SHAPE=(-data_shape [${OUT_SIZE,IN_SIZE}])
     fi
+    # Benchmark config. Disable parallelism.
+    PERF_FLAGS="-niter 10000 -hint none -nstreams 1 -nthreads 1"
     BENCH_FLAGS="-m ${MODEL_NAME} -d CPU \
-        -ip ${PRECISION} ${DATA_SHAPE[@]}"
+        -ip ${PRECISION} ${DATA_SHAPE[@]} ${PERF_FLAGS}"
     ${BENCH_RUNNER} ${BENCH_FLAGS} 2>/dev/null | \
         sed -nE "s/.*\[ INFO \]\s*Median:\s*([0-9.]+).*/\\1/p"
   done
