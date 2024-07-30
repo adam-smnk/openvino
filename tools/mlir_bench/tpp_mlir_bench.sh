@@ -3,9 +3,7 @@
 # Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-# Runs pure MLIR part of MLP benchmarks using TPP-MLIR.
-# This approach assumes that only one MLIR op is generated.
-# For example, the whole graph is outlined to MLIR.
+# Runs MLIR only MLP benchmarks using TPP-MLIR.
 
 die_syntax() {
   echo "Syntax: $0 [-t (f32|f16|bf16|...)] [-D]"
