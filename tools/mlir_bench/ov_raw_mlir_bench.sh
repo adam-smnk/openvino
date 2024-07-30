@@ -90,7 +90,8 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
         exit 1
     fi
     # Run benchmark.
-    MLIR_IR=$(echo "${MODEL_OUT}" \
+    ENV_FLAGS=OV_MLIR_TPP=0
+    MLIR_IR=$(exec env ${ENV_FLAGS} echo "${MODEL_OUT}" \
         | awk '/Source MLIR:/{flag=1; next} /Target LLVM:/{flag=0} flag' \
         | grep -vE '^[-]+$')
     BENCH_FLAGS="-entry-point-result=void -e entry -seed 123 -n 10000"
