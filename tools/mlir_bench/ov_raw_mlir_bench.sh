@@ -71,6 +71,7 @@ if [ ! "${DATA_TYPE}" ]; then
 fi
 MODEL_NAME="TPP_BENCH.xml"
 
+echo "Result type: time [ns]"
 for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
   echo "MLP - OUT: ${OUT_SIZE} INS: ${INPUT_SIZES[@]}"
   for IN_SIZE in "${INPUT_SIZES[@]}"; do

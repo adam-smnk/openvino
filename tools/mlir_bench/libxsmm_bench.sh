@@ -48,6 +48,7 @@ if [ ! "${DATA_TYPE}" ]; then
     DATA_TYPE="f32"
 fi
 
+echo "Result type: GFLOPS"
 for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
   echo "MLP - OUT: ${OUT_SIZE} INS: ${INPUT_SIZES[@]}"
   for IN_SIZE in "${INPUT_SIZES[@]}"; do
