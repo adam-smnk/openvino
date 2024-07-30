@@ -75,7 +75,6 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
   echo "MLP - OUT: ${OUT_SIZE} INS: ${INPUT_SIZES[@]}"
   for IN_SIZE in "${INPUT_SIZES[@]}"; do
     # Generate model.
-    # Generate model.
     if [ "${BASELINE_MODEL}" ]; then
         # Enable baseline model flag.
         MODEL_CONFIG=(-b="${BASELINE_MODEL}[${OUT_SIZE},${OUT_SIZE},${IN_SIZE}]")
