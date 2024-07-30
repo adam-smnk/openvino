@@ -34,21 +34,21 @@ while getopts "t:b:D" arg; do
 done
 
 OV_ROOT=$(git rev-parse --show-toplevel)
-BENCH_ROOT=$(realpath ${OV_ROOT}/tools/mlir_bench)
+BENCH_ROOT=$(realpath "${OV_ROOT}/tools/mlir_bench")
 
-MODEL_GEN=$(realpath ${BENCH_ROOT}/ov_model_gen.py)
+MODEL_GEN=$(realpath "${BENCH_ROOT}/ov_model_gen.py")
 BENCH_RUNNER=benchmark_app
 
 # Initial validation.
-if ! [ -d ${OV_ROOT} ]; then
+if ! [ -d "${OV_ROOT}" ]; then
   echo "Missing OV repo"
   exit 1
 fi
-if ! [ -d ${BENCH_ROOT} ]; then
+if ! [ -d "${BENCH_ROOT}" ]; then
   echo "Missing MLIR benchmark directory"
   exit 1
 fi
-if ! [ -f ${MODEL_GEN} ]; then
+if ! [ -f "${MODEL_GEN}" ]; then
   echo "Missing model generator"
   exit 1
 fi
@@ -56,7 +56,7 @@ if ! [ "$(command -v ${BENCH_RUNNER})" ]; then
   echo "Missing benchmark runner ${BENCH_RUNNER}"
   exit 1
 fi
-if [ "${BASELINE_MODEL}" ] && [ ${IS_DYNAMIC} ]; then
+if [ "${BASELINE_MODEL}" ] && [ "${IS_DYNAMIC}" ]; then
   echo "Baseline models with dynamic shapes not supported"
   exit 1
 fi
@@ -96,13 +96,12 @@ for MB in "${MINI_BATCHES[@]}"; do
         # No native support for bf16, use simple f16 instead.
         PRECISION="f16"
     fi
-    if [ ${IS_DYNAMIC} ]; then
+    if [ "${IS_DYNAMIC}" ]; then
         DATA_SHAPE=(-data_shape [${MB},${LAYER}])
     fi
     # Benchmark config. Disable parallelism.
     PERF_FLAGS="-niter 10000 -hint none -nstreams 1 -nthreads 1"
-    BENCH_FLAGS="-m ${MODEL_NAME} -d CPU \
-        -ip ${PRECISION} ${DATA_SHAPE[@]} ${PERF_FLAGS}"
+    BENCH_FLAGS="-m ${MODEL_NAME} -d CPU -ip ${PRECISION} ${DATA_SHAPE[@]} ${PERF_FLAGS}"
     ${BENCH_RUNNER} ${BENCH_FLAGS} 2>/dev/null | \
         sed -nE "s/.*\[ INFO \]\s*Median:\s*([0-9.]+).*/\\1/p"
   done
