@@ -85,14 +85,14 @@ for OUT_SIZE in "${OUTPUT_SIZES[@]}"; do
     fi
     GEN_FLAGS=(-t ${DATA_TYPE} -n ${MODEL_NAME})
     GEN_FLAGS+=(-p)
-    MODEL_OUT=$(python3 ${MODEL_GEN} "${MODEL_CONFIG[@]}" "${GEN_FLAGS[@]}" 2>&1)
+    ENV_FLAGS=OV_MLIR_TPP=0
+    MODEL_OUT=$(exec env ${ENV_FLAGS} python3 ${MODEL_GEN} "${MODEL_CONFIG[@]}" "${GEN_FLAGS[@]}" 2>&1)
     if [ $? != 0 ]; then
         echo "Failed to generate model"
         exit 1
     fi
     # Run benchmark.
-    ENV_FLAGS=OV_MLIR_TPP=0
-    MLIR_IR=$(exec env ${ENV_FLAGS} echo "${MODEL_OUT}" \
+    MLIR_IR=$(echo "${MODEL_OUT}" \
         | awk '/Source MLIR:/{flag=1; next} /Target LLVM:/{flag=0} flag' \
         | grep -vE '^[-]+$')
     BENCH_FLAGS="-entry-point-result=void -e entry -seed 123 -n 10000"
