@@ -82,7 +82,7 @@ for MB in "${MINI_BATCHES[@]}"; do
         MODEL_CONFIG=(-l="linear[${MB},${LAYER},${LAYER}] relu[]")
     fi
     GEN_FLAGS=(-t ${DATA_TYPE} -n ${MODEL_NAME})
-    if [ ${IS_DYNAMIC} ]; then
+    if [ "${IS_DYNAMIC}" ]; then
         GEN_FLAGS+=(--dynamic)
     fi
     python3 ${MODEL_GEN} "${MODEL_CONFIG[@]}" "${GEN_FLAGS[@]}"

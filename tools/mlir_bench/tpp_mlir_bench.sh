@@ -41,7 +41,7 @@ if ! [ "$(command -v ${BENCH_RUNNER})" ]; then
   echo "Missing benchmark runner ${BENCH_RUNNER}"
   exit 1
 fi
-if [ ${IS_DYNAMIC} ]; then
+if [ "${IS_DYNAMIC}" ]; then
   echo "Dynamic shapes are not supported by ${BENCH_RUNNER}"
   exit 1
 fi
