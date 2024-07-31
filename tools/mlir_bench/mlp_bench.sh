@@ -101,7 +101,7 @@ for MB in "${MINI_BATCHES[@]}"; do
     fi
     # Benchmark config. Disable parallelism.
     PERF_FLAGS="-niter 1000 -hint none -nstreams 1 -nthreads 1"
-    BENCH_FLAGS="-m ${MODEL_NAME} -d CPU -ip ${PRECISION} ${DATA_SHAPE[@]} ${PERF_FLAGS}"
+    BENCH_FLAGS="-m ${MODEL_NAME} -d CPU -ip ${PRECISION} -infer_precision ${DATA_TYPE} ${DATA_SHAPE[@]} ${PERF_FLAGS}"
     ${BENCH_RUNNER} ${BENCH_FLAGS} 2>/dev/null | \
         sed -nE "s/.*\[ INFO \]\s*Median:\s*([0-9.]+).*/\\1/p"
   done
