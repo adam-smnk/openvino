@@ -53,7 +53,7 @@ if [ ! "${DATA_TYPE}" ]; then
     DATA_TYPE="f32"
 fi
 
-echo "Result type: time [ns]"
+echo "Result type: time [s]"
 for MB in "${MINI_BATCHES[@]}"; do
   echo "MLP - MB: ${MB} LAYERS: ${LAYERS[@]}"
   for LAYER in "${LAYERS[@]}"; do

@@ -71,7 +71,7 @@ if [ ! "${DATA_TYPE}" ]; then
 fi
 MODEL_NAME="TPP_BENCH.xml"
 
-echo "Result type: time [ns]"
+echo "Result type: time [s]"
 for MB in "${MINI_BATCHES[@]}"; do
   echo "MLP - MB: ${MB} LAYERS: ${LAYERS[@]}"
   for LAYER in "${LAYERS[@]}"; do
