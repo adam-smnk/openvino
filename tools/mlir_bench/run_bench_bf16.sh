@@ -24,6 +24,8 @@ if [ ! "${NUM_LAYERS}" ]; then
   NUM_LAYERS=3
 fi
 
+export OV_MLIR_DEBUG=1
+
 echo "### MLP BF16 benchmarks ###"
 echo "# Layers: ${NUM_LAYERS} #"
 echo "LIBXSMM"

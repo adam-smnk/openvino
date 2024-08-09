@@ -99,7 +99,7 @@ for MB in "${MINI_BATCHES[@]}"; do
     echo "MODEL_CONFIG=${MODEL_CONFIG}"
     GEN_FLAGS=(-t ${DATA_TYPE} -n ${MODEL_NAME})
     GEN_FLAGS+=(-p)
-    ENV_FLAGS=OV_MLIR_TPP=0
+    ENV_FLAGS="OV_MLIR_TPP=0 OV_MLIR_DEBUG=1"
     MODEL_OUT=$(exec env ${ENV_FLAGS} python3 ${MODEL_GEN} "${MODEL_CONFIG[@]}" "${GEN_FLAGS[@]}" 2>&1)
     if [ $? != 0 ]; then
         echo "Failed to generate model"
