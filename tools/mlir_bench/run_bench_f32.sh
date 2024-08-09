@@ -50,4 +50,4 @@ echo "OV + MLIR - full - PyTorch"
 OV_MLIR=1 ../tools/mlir_bench/mlp_bench.sh -t f32 -l ${NUM_LAYERS}
 
 echo "TPP-MLIR const weights"
-../tools/mlir_bench/tpp_mlir_bench.sh -t f32 -l ${NUM_LAYERS}
+../tools/mlir_bench/tpp_mlir_bench.sh -t f32 -C -l ${NUM_LAYERS}
