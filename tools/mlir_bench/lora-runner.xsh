@@ -12,23 +12,25 @@ from pprint import pprint
 import re
 
 
-SIZES = [8, 16, 32, 64, 128, 256, 512, 1024]
-ITERATIONS = 100
+CONFIGS = [
+  [8], [16], [32], [64], [128], [256], [512], [1024]
+]
+ITERATIONS = 10
 
 BENCH_RUNNER="tpp-run"
 RUNNER_FLAGS=f"-entry-point-result=void -e entry -seed 123 -n {ITERATIONS}".split()
 
 
-def build_lora_model(x_dyn_dim):
+def build_lora_model(input_dim=-1, weight_dim=2048, lora_dim=8):
     opset = OpFactory('opset13')
 
     #t40 = opset.Parameter({'shape': [-1, -1, 2048], 'element_type': 'f32'}, output_names=[{'x'}])  # Input data
-    t40 = opset.Parameter({'shape': [x_dyn_dim, 2048], 'element_type': 'f32'}, output_names=[{'x'}])  # Input data
-    t52 = opset.Parameter({'shape': [1, 8], 'element_type': 'f32'}, output_names=[{'alpha'}])  # LoRA alpha parameter
+    t40 = opset.Parameter({'shape': [input_dim, weight_dim], 'element_type': 'f32'}, output_names=[{'x'}])  # Input data
+    t52 = opset.Parameter({'shape': [1, lora_dim], 'element_type': 'f32'}, output_names=[{'alpha'}])  # LoRA alpha parameter
 
-    t48 = Constant(np.random.rand(2048, 2048).astype(np.float32))   #  -> f32[2048,2048]  # Original weight matrix W (usually it is compressed to bf16/f16/u8/u4 and represented as a sub-graph)
-    t50 = Constant(np.random.rand(8, 2048).astype(np.float32))  #  -> f32[8,2048]   # LoRA matrix A
-    t54 = Constant(np.random.rand(2048, 8).astype(np.float32))  #  -> f32[2048,8]   # LoRA matrix B
+    t48 = Constant(np.random.rand(weight_dim, weight_dim).astype(np.float32))   #  -> f32[2048,2048]  # Original weight matrix W (usually it is compressed to bf16/f16/u8/u4 and represented as a sub-graph)
+    t50 = Constant(np.random.rand(lora_dim, weight_dim).astype(np.float32))  #  -> f32[8,2048]   # LoRA matrix A
+    t54 = Constant(np.random.rand(weight_dim, lora_dim).astype(np.float32))  #  -> f32[2048,8]   # LoRA matrix B
 
     t49 = opset.MatMul([t40, t48], {'transpose_a': False, 'transpose_b': True})  # f32[?,?,2048], f32[2048,2048] -> f32[?,?,2048]
     t51 = opset.MatMul([t40, t50], {'transpose_a': False, 'transpose_b': True})  # f32[?,?,2048], f32[8,2048] -> f32[?,?,8]
@@ -47,9 +49,10 @@ def main():
     no_mlir_averages = []
     mlir_averages = []
     no_ov_averages = []
-    for size in SIZES:
-        model_xml = f"lora.{size}.xml"
-        model = build_lora_model(size)
+    for config in CONFIGS:
+        model_desc = '.'.join(str(x) for x in config)
+        model_xml = f"lora.{model_desc}.xml"
+        model = build_lora_model(*config)
         ov.save_model(model, model_xml)
 
         BENCH_FLAGS=f"-m {model_xml} -d CPU -ip f32 -infer_precision f32 -hint none -nstreams 1 -nthreads 1".split()
@@ -64,7 +67,7 @@ def main():
         raw_kernel_secs = $(env OV_MLIR=1 OV_MLIR_TPP=1 OV_MLIR_DEBUG=1 benchmark_app @(BENCH_FLAGS) -niter 1 2>&1 | awk '/Source MLIR:/{flag=1; next} /Target LLVM:/{flag=0} flag' | grep -vE '^[-]+$' | tpp-run @(RUNNER_FLAGS))
         no_ov_averages.append(float(raw_kernel_secs) * 1000)
 
-    print("SIZES", SIZES)
+    print("CONFIGS", CONFIGS)
     print("OV NO-MLIR", no_mlir_averages)
     print("OV MLIR", mlir_averages)
     print("NO-OV MLIR", no_ov_averages)
