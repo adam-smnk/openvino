@@ -57,9 +57,9 @@ def build_mlir_lora_model(input_dim=-1, weight_dim=2048, lora_dim=8):
 !loraMatBType = tensor<{weight_dim}x{lora_dim}xf32>\n\
 func.func @entry(%arg0: !loraAlphaType, %arg1: !inputType) -> !inputType {{\n\
   %cst = arith.constant 0.000000e+00 : f32\n\
-  %weights = arith.constant dense<1.000000e+00> : !weightType\n\
-  %loraA = arith.constant dense<1.000000e+00> : !loraMatAType\n\
-  %loraB = arith.constant dense<1.000000e+00> : !loraMatBType\n\
+  %weights = arith.constant dense<0.001000e+00> : !weightType\n\
+  %loraA = arith.constant dense<0.002000e+00> : !loraMatAType\n\
+  %loraB = arith.constant dense<0.003000e+00> : !loraMatBType\n\
   %0 = tensor.empty() : tensor<{input_dim}x{lora_dim}xf32>\n\
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<{input_dim}x{lora_dim}xf32>)\
     -> tensor<{input_dim}x{lora_dim}xf32>\n\
