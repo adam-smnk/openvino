@@ -55,24 +55,25 @@ def build_mlir_lora_model(input_dim=-1, weight_dim=2048, lora_dim=8):
 !weightType = tensor<{weight_dim}x{weight_dim}xf32>\n\
 !loraMatAType = tensor<{lora_dim}x{weight_dim}xf32>\n\
 !loraMatBType = tensor<{weight_dim}x{lora_dim}xf32>\n\
+!loraResultType = tensor<{input_dim}x{lora_dim}xf32>\n\
 func.func @entry(%arg0: !loraAlphaType, %arg1: !inputType) -> !inputType {{\n\
   %cst = arith.constant 0.000000e+00 : f32\n\
   %weights = arith.constant dense<0.001000e+00> : !weightType\n\
   %loraA = arith.constant dense<0.002000e+00> : !loraMatAType\n\
   %loraB = arith.constant dense<0.003000e+00> : !loraMatBType\n\
-  %0 = tensor.empty() : tensor<{input_dim}x{lora_dim}xf32>\n\
-  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<{input_dim}x{lora_dim}xf32>)\
-    -> tensor<{input_dim}x{lora_dim}xf32>\n\
+  %0 = tensor.empty() : !loraResultType\n\
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : !loraResultType)\
+    -> !loraResultType\n\
   %2 = linalg.matmul_transpose_b ins(%arg1, %loraA : !inputType, !loraMatAType)\
-    outs(%1 : tensor<{input_dim}x{lora_dim}xf32>) -> tensor<{input_dim}x{lora_dim}xf32>\n\
+    outs(%1 : !loraResultType) -> !loraResultType\n\
   %collapsed = tensor.collapse_shape %arg0 [[0, 1]] : !loraAlphaType into tensor<{lora_dim}xf32>\n\
   %broadcasted = linalg.broadcast ins(%collapsed : tensor<{lora_dim}xf32>)\
-    outs(%0 : tensor<{input_dim}x{lora_dim}xf32>) dimensions = [0]\n\
-  %3 = linalg.mul ins(%2, %broadcasted : tensor<{input_dim}x{lora_dim}xf32>, tensor<{input_dim}x{lora_dim}xf32>)\
-    outs(%0 : tensor<{input_dim}x{lora_dim}xf32>) -> tensor<{input_dim}x{lora_dim}xf32>\n\
+    outs(%0 : !loraResultType) dimensions = [0]\n\
+  %3 = linalg.mul ins(%2, %broadcasted : !loraResultType, !loraResultType)\
+    outs(%0 : !loraResultType) -> !loraResultType\n\
   %4 = tensor.empty() : !inputType\n\
   %5 = linalg.fill ins(%cst : f32) outs(%4 : !inputType) -> !inputType\n\
-  %6 = linalg.matmul_transpose_b ins(%3, %loraB : tensor<{input_dim}x{lora_dim}xf32>, !loraMatBType)\
+  %6 = linalg.matmul_transpose_b ins(%3, %loraB : !loraResultType, !loraMatBType)\
     outs(%5 : !inputType) -> !inputType\n\
   %7 = linalg.matmul_transpose_b ins(%arg1, %weights : !inputType, !weightType)\
     outs(%5 : !inputType) -> !inputType\n\
